@@ -43,12 +43,46 @@ const Home = ({ data }) => {
     }
   };
 
+  const NoiseOverlay = () => (
+    <div 
+      className="absolute inset-0 opacity-[0.15] mix-blend-overlay pointer-events-none"
+      style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
+      }}
+    />
+  );
+
   return (
     <div className="flex flex-col">
       
-      {/* Hero Section */}
-      <section className="min-h-screen flex items-center justify-center relative px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full pt-16 md:pt-0">
-        <div className="flex flex-col items-center text-center gap-8 lg:gap-10 w-full">
+      {/* Hero Section with Noisy Gradient Elements */}
+      <section className="min-h-screen flex items-center justify-center relative px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full pt-16 md:pt-0 overflow-hidden">
+        
+        {/* Decorative Noisy Gradient Blobs */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+          {/* Top Left Blob */}
+          <div className="absolute top-[10%] left-[-5%] w-[40vw] h-[40vw] max-w-[500px] animate-blob">
+            <div className="w-full h-full bg-indigo-600/20 rounded-full blur-[100px] relative">
+              <NoiseOverlay />
+            </div>
+          </div>
+          
+          {/* Bottom Right Blob */}
+          <div className="absolute bottom-[5%] right-[-5%] w-[45vw] h-[45vw] max-w-[600px] animate-blob animation-delay-2000">
+            <div className="w-full h-full bg-rose-600/10 rounded-full blur-[120px] relative">
+              <NoiseOverlay />
+            </div>
+          </div>
+
+          {/* Center Subtle Accent */}
+          <div className="absolute top-[40%] left-[30%] w-[30vw] h-[30vw] max-w-[400px] animate-blob animation-delay-4000 opacity-40">
+            <div className="w-full h-full bg-cyan-600/10 rounded-full blur-[80px] relative">
+              <NoiseOverlay />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center text-center gap-8 lg:gap-10 w-full relative z-10">
             <div className="reveal">
                 <span className="inline-flex items-center gap-2 py-2 px-5 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-xs font-bold uppercase tracking-[0.2em] mb-8 backdrop-blur-md shadow-2xl">
                     <span className="relative flex h-2 w-2">
@@ -195,7 +229,7 @@ const Home = ({ data }) => {
                     <div className="h-[2px] w-8 bg-cyan-500"></div>
                     <span className="text-cyan-400 font-black uppercase tracking-widest text-xs">Portfolio</span>
                   </div>
-                  <h2 className="text-5xl lg:text-7xl font-black text-white mb-4 tracking-tighter">Featured <span className="text-zinc-700">Work.</span></h2>
+                  <h2 className="text-5xl md:text-7xl font-black text-white mb-4 tracking-tighter">Featured <span className="text-zinc-700">Work.</span></h2>
                   <p className="text-zinc-500 font-medium">Selected projects from my archive.</p>
               </div>
               <Link to="/projects" className="group inline-flex items-center px-8 py-3 bg-zinc-900 border border-zinc-800 text-white text-xs font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-white hover:text-black transition-all shadow-2xl">
