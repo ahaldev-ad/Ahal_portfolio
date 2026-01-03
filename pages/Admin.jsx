@@ -1,0 +1,584 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Save, Plus, Trash2, LogOut, LayoutDashboard, Code, 
+  FolderGit2, MessageSquare, Loader2, ArrowLeft, 
+  Briefcase, GraduationCap, Edit2, ChevronUp, 
+  Menu, X, Reply, Send, CheckCircle, Settings, Mail, Star,
+  Github, Linkedin, Twitter, MapPin, ImageIcon, User, Globe
+} from 'lucide-react';
+import { getAppData, saveAppData, logoutUser, getEnquiries, markEnquiryAsReplied } from '../services/storage';
+import { INITIAL_DATA } from '../constants';
+
+const Admin = () => {
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const [enquiries, setEnquiries] = useState([]);
+  const [activeTab, setActiveTab] = useState('profile');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editingProjectId, setEditingProjectId] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  // Enquiry specific states
+  const [replyingToId, setReplyingToId] = useState(null);
+  const [replyText, setReplyText] = useState('');
+  const [isSendingReply, setIsSendingReply] = useState(false);
+
+  useEffect(() => {
+    const loadAllData = async () => {
+      setIsLoading(true);
+      try {
+        const [fetchedData, fetchedEnquiries] = await Promise.all([
+          getAppData().catch(() => INITIAL_DATA),
+          getEnquiries().catch(() => [])
+        ]);
+        setData(fetchedData || INITIAL_DATA);
+        setEnquiries(fetchedEnquiries || []);
+      } catch (error) {
+        console.error("Failed to load admin data, using defaults", error);
+        setData(INITIAL_DATA);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadAllData();
+  }, []);
+
+  const handleSave = async () => {
+    if (data) {
+      setIsSaving(true);
+      try {
+        await saveAppData(data);
+        alert("Changes saved successfully!");
+      } catch (error) {
+        alert("Failed to save changes. Make sure you are logged in correctly.");
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  };
+
+  const handleLogout = async () => {
+    localStorage.removeItem('portfolio_auth_demo');
+    await logoutUser();
+    navigate('/');
+    window.location.reload();
+  };
+
+  const switchTab = (tabId) => {
+    setActiveTab(tabId);
+    setIsSidebarOpen(false);
+  };
+
+  const updateProfile = (field, value) => {
+    if (!data) return;
+    setData({ ...data, profile: { ...data.profile, [field]: value } });
+  };
+
+  const updateSettings = (field, value) => {
+    if (!data) return;
+    const settings = data.settings || {};
+    setData({ ...data, settings: { ...settings, [field]: value } });
+  };
+
+  const updateSkill = (id, field, value) => {
+    if (!data) return;
+    setData({ ...data, skills: data.skills.map(s => s.id === id ? { ...s, [field]: value } : s) });
+  };
+
+  const addSkill = () => {
+    if (!data) return;
+    const newSkill = { id: Date.now().toString(), name: 'New Skill', category: 'Tools', level: 50 };
+    setData({ ...data, skills: [...data.skills, newSkill] });
+  };
+
+  const deleteSkill = (id) => {
+    setData({ ...data, skills: data.skills.filter(s => s.id !== id) });
+  };
+
+  const updateProject = (id, field, value) => {
+    setData({ ...data, projects: data.projects.map(p => p.id === id ? { ...p, [field]: value } : p) });
+  };
+
+  const addProject = () => {
+    const newId = Date.now().toString();
+    const newProject = {
+      id: newId,
+      title: 'New Project',
+      description: 'Project description...',
+      technologies: [],
+      imageUrl: 'https://picsum.photos/600/400',
+      category: 'Web',
+      isFeatured: false
+    };
+    setData({ ...data, projects: [newProject, ...data.projects] });
+    setEditingProjectId(newId);
+  };
+
+  const deleteProject = (id, e) => {
+    e.stopPropagation();
+    if (window.confirm('Delete project?')) {
+        setData({ ...data, projects: data.projects.filter(p => p.id !== id) });
+        if (editingProjectId === id) setEditingProjectId(null);
+    }
+  };
+
+  const handleMarkAsReplied = async (id) => {
+    const success = await markEnquiryAsReplied(id);
+    if (success) {
+      setEnquiries(enquiries.map(e => e.id === id ? { ...e, replied: true } : e));
+      setReplyingToId(null);
+    }
+  };
+
+  const handleDirectSend = async (enquiry) => {
+    if (!replyText.trim()) return;
+    setIsSendingReply(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    const success = await markEnquiryAsReplied(enquiry.id);
+    if (success) {
+      setEnquiries(prev => prev.map(item => item.id === enquiry.id ? {...item, replied: true} : item));
+      setReplyingToId(null);
+      setReplyText('');
+      alert(`Email sent successfully to ${enquiry.email}!`);
+    }
+    setIsSendingReply(false);
+  };
+
+  if (isLoading) return (
+    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-indigo-400 gap-4">
+        <Loader2 className="animate-spin" size={40} />
+        <p className="text-xs font-bold uppercase tracking-[0.3em]">Opening Control Center...</p>
+    </div>
+  );
+
+  const NavItems = [
+    { id: 'profile', icon: User, label: 'Profile' },
+    { id: 'skills', icon: Code, label: 'Skills' },
+    { id: 'projects', icon: FolderGit2, label: 'Projects' },
+    { id: 'enquiries', icon: MessageSquare, label: 'Enquiries' },
+    { id: 'settings', icon: Settings, label: 'Settings' }
+  ];
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-zinc-200 flex flex-col md:flex-row font-sans relative overflow-hidden">
+      
+      {/* Mobile Top Header */}
+      <div className="md:hidden flex items-center justify-between px-6 py-4 bg-zinc-900 border-b border-zinc-800 z-50">
+        <h1 className="text-lg font-bold text-white flex items-center gap-2">
+            <span className="w-2.5 h-2.5 bg-indigo-500 rounded-full"></span>
+            Admin
+        </h1>
+        <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 text-zinc-400 hover:text-white transition-colors"
+        >
+            {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
+
+      {/* Sidebar Overlay for Mobile */}
+      {isSidebarOpen && (
+        <div 
+            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+            onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar Navigation */}
+      <aside className={`
+        fixed md:relative inset-y-0 left-0 z-40 w-72 bg-zinc-900 border-r border-zinc-800 flex flex-col transition-transform duration-300 ease-in-out
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
+        <div className="p-8 hidden md:block">
+          <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+            <span className="w-3 h-3 bg-indigo-500 rounded-full"></span>
+            Admin Panel
+          </h1>
+          <p className="text-xs text-zinc-500 mt-2 ml-5">Portfolio Content</p>
+        </div>
+        
+        <nav className="flex-grow px-4 mt-4 md:mt-0 space-y-1">
+          {NavItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => switchTab(item.id)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium ${
+                activeTab === item.id 
+                  ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-600/20' 
+                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+              }`}
+            >
+              <item.icon size={18} /> {item.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="p-4 mt-auto border-t border-zinc-800 space-y-2">
+          <button onClick={() => navigate('/')} className="w-full flex items-center gap-3 px-4 py-2 text-zinc-400 hover:text-white transition-colors text-sm">
+             <ArrowLeft size={16} /> Back to Site
+          </button>
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-900/10 rounded-lg transition-colors text-sm">
+            <LogOut size={16} /> Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="flex-grow h-[calc(100vh-64px)] md:h-screen overflow-y-auto bg-zinc-950/50 scroll-smooth">
+        <div className="p-6 md:p-12 max-w-5xl mx-auto">
+            
+            {/* Context Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                <div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-white capitalize">{activeTab}</h2>
+                    <p className="text-zinc-500 text-sm mt-1">Manage your {activeTab} section</p>
+                </div>
+                
+                {activeTab !== 'enquiries' && (
+                    <button
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-2.5 rounded-lg hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 font-medium text-sm"
+                    >
+                        {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                        {isSaving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                )}
+            </div>
+
+            {/* Profile Tab */}
+            {activeTab === 'profile' && (
+                <div className="grid grid-cols-1 gap-8">
+                    {/* Visuals: Hero Image */}
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+                        <div className="flex items-center gap-3 mb-6 border-b border-zinc-800 pb-4">
+                            <ImageIcon className="text-indigo-400" size={20} />
+                            <h3 className="text-lg font-semibold text-white">Visual Presence</h3>
+                        </div>
+                        <div className="flex flex-col md:flex-row gap-6 items-start">
+                            <div className="w-32 h-32 bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 shrink-0">
+                                <img src={data.profile.heroImage} alt="Preview" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-grow w-full">
+                                <InputField 
+                                    label="Hero Image URL" 
+                                    value={data.profile.heroImage} 
+                                    onChange={v => updateProfile('heroImage', v)} 
+                                    placeholder="https://images.unsplash.com/..."
+                                />
+                                <p className="text-[10px] text-zinc-500 mt-2">Recommended: Square aspect ratio, high resolution.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Personal Details */}
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+                        <div className="flex items-center gap-3 mb-6 border-b border-zinc-800 pb-4">
+                            <User className="text-indigo-400" size={20} />
+                            <h3 className="text-lg font-semibold text-white">Identity & Bio</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <InputField label="Full Name" value={data.profile.name} onChange={v => updateProfile('name', v)} />
+                            <InputField label="Job Title" value={data.profile.title} onChange={v => updateProfile('title', v)} />
+                            <div className="md:col-span-2">
+                                <InputField label="Tagline" value={data.profile.tagline} onChange={v => updateProfile('tagline', v)} />
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">About Bio</label>
+                                <textarea rows={6} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-zinc-300 focus:border-indigo-500 outline-none transition-all" value={data.profile.about} onChange={e => updateProfile('about', e.target.value)} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Social & Contact */}
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+                        <div className="flex items-center gap-3 mb-6 border-b border-zinc-800 pb-4">
+                            <Globe className="text-indigo-400" size={20} />
+                            <h3 className="text-lg font-semibold text-white">Contact & Social Links</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-6">
+                                <InputField label="Public Email Address" value={data.profile.email} onChange={v => updateProfile('email', v)} icon={<Mail size={14}/>} />
+                                <InputField label="Location" value={data.profile.location} onChange={v => updateProfile('location', v)} icon={<MapPin size={14}/>} />
+                            </div>
+                            <div className="space-y-6">
+                                <InputField label="GitHub Profile URL" value={data.profile.github} onChange={v => updateProfile('github', v)} icon={<Github size={14}/>} />
+                                <InputField label="LinkedIn Profile URL" value={data.profile.linkedin} onChange={v => updateProfile('linkedin', v)} icon={<Linkedin size={14}/>} />
+                                <InputField label="Twitter/X Profile URL" value={data.profile.twitter || ''} onChange={v => updateProfile('twitter', v)} icon={<Twitter size={14}/>} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ... other tabs (skills, projects, enquiries, settings) remain the same ... */}
+            {activeTab === 'skills' && (
+                <div className="space-y-8">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 md:p-6">
+                         <h3 className="text-lg font-semibold text-white mb-6 border-b border-zinc-800 pb-4">Career Highlights</h3>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                            <div>
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Experience Summary</label>
+                                <textarea rows={3} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-zinc-300 focus:border-indigo-500 outline-none transition-all" value={data.profile.experience || ''} onChange={e => updateProfile('experience', e.target.value)} placeholder="Years of experience, industries..." />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Learning Goals</label>
+                                <textarea rows={3} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-zinc-300 focus:border-indigo-500 outline-none transition-all" value={data.profile.learning || ''} onChange={e => updateProfile('learning', e.target.value)} placeholder="Technologies you are currently exploring..." />
+                            </div>
+                         </div>
+                    </div>
+
+                    <div className="space-y-6">
+                         <div className="flex justify-between items-center">
+                             <h3 className="text-lg font-semibold text-white">Technical Arsenal</h3>
+                             <button onClick={addSkill} className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors px-4 py-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
+                                <Plus size={16} /> Add Skill
+                            </button>
+                         </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {data.skills.map(skill => (
+                                <div key={skill.id} className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl flex items-center gap-4 group shadow-sm hover:shadow-indigo-500/5 transition-all">
+                                    <div className="flex-grow grid grid-cols-2 gap-2">
+                                        <input className="bg-transparent border-b border-zinc-800 focus:border-indigo-500 outline-none text-white font-medium" value={skill.name} onChange={e => updateSkill(skill.id, 'name', e.target.value)} placeholder="Skill" />
+                                        <input type="number" className="bg-transparent border-b border-zinc-800 focus:border-indigo-500 outline-none text-zinc-400 text-right" value={skill.level} onChange={e => updateSkill(skill.id, 'level', parseInt(e.target.value))} />
+                                        <select className="bg-zinc-950 text-xs text-zinc-400 rounded p-1 outline-none border border-zinc-800" value={skill.category} onChange={e => updateSkill(skill.id, 'category', e.target.value)}>
+                                            <option value="Frontend">Frontend</option>
+                                            <option value="Backend">Backend</option>
+                                            <option value="Design">Design</option>
+                                            <option value="Tools">Tools</option>
+                                        </select>
+                                    </div>
+                                    <button onClick={() => deleteSkill(skill.id)} className="text-zinc-600 hover:text-red-400 p-2 transition-colors"><Trash2 size={18} /></button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'projects' && (
+                <div className="space-y-6">
+                    <button onClick={addProject} className="w-full py-6 border-2 border-dashed border-zinc-800 rounded-xl text-zinc-500 hover:border-indigo-500 hover:text-indigo-500 transition-colors flex items-center justify-center gap-2 font-medium bg-zinc-900/30">
+                        <Plus size={20} /> Add New Project
+                    </button>
+                    <div className="grid grid-cols-1 gap-4">
+                        {data.projects.map(project => (
+                            <div key={project.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                                {editingProjectId === project.id ? (
+                                    <div className="p-6">
+                                         <div className="flex justify-between items-center mb-4">
+                                            <div className="flex items-center gap-4">
+                                                <label className="flex items-center gap-2 cursor-pointer group">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        className="w-4 h-4 rounded border-zinc-800 bg-zinc-950 text-indigo-600 focus:ring-indigo-500"
+                                                        checked={project.isFeatured || false} 
+                                                        onChange={e => updateProject(project.id, 'isFeatured', e.target.checked)} 
+                                                    />
+                                                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest group-hover:text-indigo-400 transition-colors">Featured on Home</span>
+                                                </label>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => setEditingProjectId(null)} className="text-zinc-500 hover:text-white p-2 bg-zinc-800/50 rounded-lg" title="Collapse">
+                                                    <ChevronUp size={20} />
+                                                </button>
+                                                <button onClick={(e) => deleteProject(project.id, e)} className="text-zinc-500 hover:text-red-400 p-2 bg-zinc-800/50 rounded-lg" title="Delete">
+                                                    <Trash2 size={20} />
+                                                </button>
+                                            </div>
+                                         </div>
+                                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                                            <div className="lg:col-span-4">
+                                                <div className="aspect-video bg-zinc-950 rounded-xl overflow-hidden border border-zinc-800 mb-4 shadow-inner">
+                                                    <img src={project.imageUrl} alt="" className="w-full h-full object-cover opacity-70" />
+                                                </div>
+                                                <InputField label="Image URL" value={project.imageUrl} onChange={v => updateProject(project.id, 'imageUrl', v)} />
+                                            </div>
+                                            <div className="lg:col-span-8 space-y-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <InputField label="Title" value={project.title} onChange={v => updateProject(project.id, 'title', v)} />
+                                                    <InputField label="Category" value={project.category} onChange={v => updateProject(project.id, 'category', v)} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-zinc-500 uppercase mb-2 tracking-wider">Description</label>
+                                                    <textarea rows={3} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-zinc-300 focus:border-indigo-500 outline-none" value={project.description} onChange={e => updateProject(project.id, 'description', e.target.value)} />
+                                                </div>
+                                                <InputField label="Technologies (comma separated)" value={project.technologies.join(', ')} onChange={v => updateProject(project.id, 'technologies', v.split(',').map(t => t.trim()))} />
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <InputField label="Demo Link" value={project.demoLink || ''} onChange={v => updateProject(project.id, 'demoLink', v)} />
+                                                    <InputField label="Repo Link" value={project.repoLink || ''} onChange={v => updateProject(project.id, 'repoLink', v)} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="p-4 flex flex-col sm:flex-row items-center gap-4 hover:bg-zinc-800/30 transition-colors group cursor-pointer" onClick={() => setEditingProjectId(project.id)}>
+                                        <div className="w-20 h-14 bg-zinc-950 rounded-lg overflow-hidden border border-zinc-800 flex-shrink-0 relative">
+                                            <img src={project.imageUrl} alt="" className="w-full h-full object-cover" />
+                                            {project.isFeatured && (
+                                                <div className="absolute top-1 right-1 p-0.5 bg-indigo-600 rounded-full shadow-lg">
+                                                    <Star size={10} className="text-white fill-white" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex-grow">
+                                             <div className="flex items-center gap-2">
+                                                <h4 className="font-bold text-white group-hover:text-indigo-400 transition-colors">{project.title}</h4>
+                                                {project.isFeatured && <Star size={14} className="text-indigo-400 fill-indigo-400" />}
+                                             </div>
+                                             <span className="text-xs text-zinc-500 uppercase tracking-widest font-semibold">{project.category}</span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={(e) => { e.stopPropagation(); setEditingProjectId(project.id); }} className="flex items-center gap-2 px-4 py-2 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 rounded-lg transition-all text-sm font-medium border border-indigo-500/20">
+                                                <Edit2 size={16} /> Edit
+                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); deleteProject(project.id, e); }} className="p-2 text-zinc-500 hover:text-red-400 transition-colors"><Trash2 size={18} /></button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'enquiries' && (
+                <div className="space-y-4">
+                    {enquiries.length === 0 ? (
+                        <div className="text-center py-16 text-zinc-500 bg-zinc-900/50 rounded-2xl border border-zinc-800 border-dashed">
+                            No enquiries received yet.
+                        </div>
+                    ) : (
+                        enquiries.map(enquiry => (
+                            <div key={enquiry.id} className={`bg-zinc-900 border transition-all duration-300 rounded-2xl overflow-hidden ${enquiry.replied ? 'border-green-900/30 opacity-75' : 'border-zinc-800'}`}>
+                                <div className="p-6">
+                                    <div className="flex justify-between items-start mb-2 gap-2">
+                                        <div className="flex items-center gap-3">
+                                            <h4 className="text-lg font-bold text-white leading-tight">{enquiry.name}</h4>
+                                            {enquiry.replied && (
+                                                <span className="flex items-center gap-1 bg-green-500/10 text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-500/20">
+                                                    <CheckCircle size={10} /> REPLIED
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="text-[10px] text-zinc-500 whitespace-nowrap">{new Date(enquiry.createdAt).toLocaleDateString()}</span>
+                                    </div>
+                                    <div className="text-indigo-400 text-sm mb-4 font-mono">{enquiry.email}</div>
+                                    <p className="text-zinc-300 text-sm bg-zinc-950 p-4 rounded-lg border border-zinc-800 leading-relaxed mb-4">
+                                        {enquiry.message}
+                                    </p>
+
+                                    <div className="flex items-center justify-between">
+                                        <button 
+                                            onClick={() => {
+                                              setReplyingToId(replyingToId === enquiry.id ? null : enquiry.id);
+                                              setReplyText('');
+                                            }}
+                                            className="flex items-center gap-2 text-xs font-bold text-indigo-400 hover:text-indigo-300 px-3 py-2 bg-indigo-500/10 rounded-lg transition-colors"
+                                        >
+                                            <Reply size={14} /> {replyingToId === enquiry.id ? 'Cancel Reply' : 'Quick Reply'}
+                                        </button>
+                                        
+                                        {!enquiry.replied && (
+                                            <button 
+                                                onClick={() => handleMarkAsReplied(enquiry.id)}
+                                                className="text-[10px] font-bold text-zinc-500 hover:text-zinc-300 uppercase tracking-widest"
+                                            >
+                                                Mark as Replied
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Reply Composer */}
+                                {replyingToId === enquiry.id && (
+                                    <div className="bg-zinc-950 p-6 border-t border-zinc-800 animate-slide-down">
+                                        <div className="mb-4">
+                                          <div className="flex items-center gap-2 mb-2">
+                                              <Mail size={14} className="text-zinc-500" />
+                                              <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                                                  Reply from: {data.settings?.senderEmail || data.profile.email}
+                                              </span>
+                                          </div>
+                                          <textarea 
+                                              value={replyText}
+                                              onChange={(e) => setReplyText(e.target.value)}
+                                              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-sm text-zinc-200 focus:border-indigo-500 outline-none transition-all placeholder-zinc-700"
+                                              rows={5}
+                                              placeholder={`Hello ${enquiry.name.split(' ')[0]}, thank you for your message!`}
+                                          />
+                                        </div>
+                                        <div className="flex justify-end gap-3">
+                                            <button 
+                                                onClick={() => handleDirectSend(enquiry)}
+                                                disabled={isSendingReply || !replyText.trim()}
+                                                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
+                                            >
+                                                {isSendingReply ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                                                {isSendingReply ? 'Sending...' : 'Send Direct Message'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
+
+            {activeTab === 'settings' && (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold text-white mb-6 border-b border-zinc-800 pb-4">Admin Configurations</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Reply-To Email Address</label>
+                            <input 
+                                type="email" 
+                                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-zinc-300 focus:border-indigo-500 outline-none transition-all" 
+                                value={data.settings?.senderEmail || ''} 
+                                onChange={e => updateSettings('senderEmail', e.target.value)} 
+                                placeholder="e.g. hello@yourdomain.com"
+                            />
+                            <p className="mt-2 text-[10px] text-zinc-500">This email will be used as the sender address for direct replies in the dashboard.</p>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Notification Method</label>
+                            <select 
+                                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-zinc-300 focus:border-indigo-500 outline-none transition-all"
+                                value={data.settings?.emailServiceName || 'Default'}
+                                onChange={e => updateSettings('emailServiceName', e.target.value)}
+                            >
+                                <option value="Default">System Default (Simulation)</option>
+                                <option value="EmailJS">EmailJS Integration</option>
+                                <option value="SendGrid">SendGrid Integration</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+      </main>
+    </div>
+  );
+};
+
+const InputField = ({ label, value, onChange, type = "text", placeholder = "", icon = null }) => (
+    <div className="w-full">
+        <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+            {icon}
+            {label}
+        </label>
+        <input 
+            type={type} 
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-zinc-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all placeholder-zinc-700" 
+            value={value} 
+            placeholder={placeholder}
+            onChange={e => onChange(e.target.value)} 
+        />
+    </div>
+);
+
+export default Admin;
