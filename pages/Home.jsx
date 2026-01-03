@@ -43,18 +43,17 @@ const Home = ({ data }) => {
     }
   };
 
-  // Modern Grainy Glow Spot component
   const GrainySpot = ({ className, color = "rgba(99, 102, 241, 0.12)" }) => (
     <div className={`absolute pointer-events-none blur-[60px] ${className}`}>
       <div 
         className="w-full h-full rounded-full relative overflow-hidden"
-        style={{ background: `radial-gradient(circle, ${color} 0%, transparent 70%)` }}
+        style={{ background: `radial-gradient(circle, ${color} 0%, transparent 75%)` }}
       >
         <div 
-          className="absolute inset-0 opacity-[0.3] mix-blend-overlay"
+          className="absolute inset-0 opacity-[0.4] mix-blend-overlay"
           style={{ 
             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-            backgroundSize: '80px 80px'
+            backgroundSize: '100px 100px'
           }}
         />
       </div>
@@ -67,10 +66,10 @@ const Home = ({ data }) => {
       {/* Hero Section */}
       <section className="min-h-screen flex flex-col items-center justify-center relative px-4 overflow-hidden">
         
-        {/* Subtle Textured Background Elements */}
+        {/* Localization of Small Grainy Elements */}
         <GrainySpot className="top-[15%] left-[10%] w-64 h-64 animate-blob" color="rgba(99, 102, 241, 0.15)" />
-        <GrainySpot className="bottom-[30%] right-[10%] w-72 h-72 animate-blob animation-delay-2000" color="rgba(167, 139, 250, 0.12)" />
-        <GrainySpot className="top-[40%] right-[30%] w-32 h-32 opacity-40" color="rgba(45, 212, 191, 0.1)" />
+        <GrainySpot className="bottom-[25%] right-[5%] w-72 h-72 animate-blob animation-delay-2000" color="rgba(139, 92, 246, 0.12)" />
+        <GrainySpot className="top-[40%] left-[45%] w-32 h-32 opacity-50" color="rgba(45, 212, 191, 0.1)" />
 
         {/* Centered Content Wrapper */}
         <div className="flex flex-col items-center text-center max-w-4xl z-10">
@@ -200,7 +199,7 @@ const Home = ({ data }) => {
         </div>
       </section>
 
-      {/* Skills Arsenal Section */}
+      {/* Skills Section */}
       <section className="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-zinc-900/30">
         <div className="reveal mb-16 text-center">
           <div className="inline-block px-3 py-1 bg-zinc-900 rounded border border-zinc-800 text-[9px] font-black uppercase tracking-[0.4em] text-zinc-600 mb-4">Technical Stack</div>
